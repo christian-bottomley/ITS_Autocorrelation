@@ -1,5 +1,3 @@
-library(roxygen2)
-
 
 # ITS_Autocorrelation
 
