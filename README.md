@@ -1,6 +1,3 @@
-library(roxygen2)
-
-
 # ITS_Autocorrelation
 
 <p>Data, code and results for paper on autocorrelation in interrupted time series<p>
