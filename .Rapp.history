@@ -1,0 +1,415 @@
+# Data Example: Analysis of the impact of pneumoccocal vaccine introduction on # #
+# the incidence of severe and very severe pneumonia in children 2-59 months in ##
+# Kilifi, Kenya. Analysis illustrates the use of differnt methods for adjusting##
+# autocorrelation (Prais-Winsten method, ARMA modelling and Newey-West method) #                                                               ##
+#------------------------------------------------------------------------------#  #
+#
+  library(tidyverse)#
+  library(lubridate)#
+  library(cowplot)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)#
+#
+# Data management  #
+  dat <-#
+    read_csv("data_pneumo_ex.csv") %>%#
+    mutate(rate_10000 = 10000 * rate) %>%#
+    mutate(log2rate = log(rate_10000, base = 2)) %>%#
+    mutate(day = 14) %>%#
+    mutate(month = match(month, month.abb)) %>%#
+    mutate(date = make_date(year, month, day))
+dat
+dat <-#
+    read_csv("data_pneumo_ex.csv") %>%#
+    mutate(rate_10000 = 10000 * rate) %>%#
+    mutate(log2rate = log(rate_10000, base = 2)) %>%#
+    mutate(day = 14) %>%#
+    mutate(month = match(month, month.abb)) %>%#
+    mutate(date = make_date(year, month, day)) %>%#
+    mutate(month = factor(month))
+lr <- lm(log2rate ~ vac + roll + studymo + month #
+           + strike1 + strike2, data = dat)#
+#
+  pw <- prais_winsten(log2rate ~ vac + roll + studymo + month #
+                      + strike1 + strike2, data = dat) #
+  aa <- auto.arima(dat$log2rate, #
+                   xreg = model.matrix.lm(lr)[,-1], #
+                   stepwise = T,#
+                   d = 0, #
+                   D = 0, #
+                   ic = 'aicc', #
+                   seasonal = F#
+                   )
+lr
+pw
+aa
+par <- c("studymo", "vac")#
+  est <- rbind(coef(lr)[par], coef(pw)[par], coef(aa)[par], coef(lr)[par])#
+  se <- rbind(sqrt(diag(vcov(lr))[par]),#
+              sqrt(diag(vcovHC.prais(pw))[par]),#
+              sqrt(diag(vcov(aa))[par]),#
+              sqrt(diag(NeweyWest(lr, #
+                                  lag = NULL, prewhite = F, #
+                                  adjust = T)[par, par]))#
+              )#
+  lb <- 100 * (1 - 2^(est + 1.96 * se))#
+  ub <- 100 * (1 - 2^(est - 1.96 * se))#
+  est <- 100 * (1 - 2^est)#
+  res_table <- cbind(#
+                    format(est[ ,"studymo"], digits = 2),#
+                    paste(#
+                     format(lb[ ,"studymo"], digits = 2),#
+                     format(ub[ ,"studymo"], digits = 2), sep =","),#
+                     format(est[ ,"vac"], digits = 2, nsmall = 1),#
+                     paste(#
+                      format(lb[ ,"vac"], digits = 2, nsmall = 1),#
+                      format(ub[ ,"vac"], digits = 2, nsmall = 1), sep =",")#
+                    )#
+  colnames(res_table) <- c("trend", "ci trend", "vac", "ci vac")#
+  floor(bwNeweyWest(lr))#
+  view(res_table)
+library(tidyverse)#
+  library(lubridate)#
+  library(cowplot)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)
+floor(bwNeweyWest(lr))#
+  view(res_table)
+#------------------------------------------------------------------------------##
+# Data Example: Analysis of the impact of pneumoccocal vaccine introduction on # #
+# the incidence of severe and very severe pneumonia in children 2-59 months in ##
+# Kilifi, Kenya. Analysis illustrates the use of differnt methods for adjusting##
+# autocorrelation (Prais-Winsten method, ARMA modelling and Newey-West method) #                                                               ##
+#------------------------------------------------------------------------------#  #
+#
+  library(tidyverse)#
+  library(lubridate)#
+  library(cowplot)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)#
+#
+# Data management  #
+  dat <-#
+    read_csv("data_pneumo_ex.csv") %>%#
+    mutate(rate_10000 = 10000 * rate) %>%#
+    mutate(log2rate = log(rate_10000, base = 2)) %>%#
+    mutate(day = 14) %>%#
+    mutate(month = match(month, month.abb)) %>%#
+    mutate(date = make_date(year, month, day)) %>%#
+    mutate(month = factor(month)) #
+    contrasts(dat$month) <- contr.sum(12)#
+# Fit models  #
+  lr <- lm(log2rate ~ vac + roll + studymo + month #
+           + strike1 + strike2, data = dat)#
+#
+  pw <- prais_winsten(log2rate ~ vac + roll + studymo + month #
+                      + strike1 + strike2, data = dat) #
+  aa <- auto.arima(dat$log2rate, #
+                   xreg = model.matrix.lm(lr)[,-1], #
+                   stepwise = T,#
+                   d = 0, #
+                   D = 0, #
+                   ic = 'aicc', #
+                   seasonal = F#
+                   )#
+# Table of trend and vaccine impact estimates#
+  par <- c("studymo", "vac")#
+  est <- rbind(coef(lr)[par], coef(pw)[par], coef(aa)[par], coef(lr)[par])#
+  se <- rbind(sqrt(diag(vcov(lr))[par]),#
+              sqrt(diag(vcovHC.prais(pw))[par]),#
+              sqrt(diag(vcov(aa))[par]),#
+              sqrt(diag(NeweyWest(lr, #
+                                  lag = NULL, prewhite = F, #
+                                  adjust = T)[par, par]))#
+              )#
+  lb <- 100 * (1 - 2^(est + 1.96 * se))#
+  ub <- 100 * (1 - 2^(est - 1.96 * se))#
+  est <- 100 * (1 - 2^est)#
+  res_table <- cbind(#
+                    format(est[ ,"studymo"], digits = 2),#
+                    paste(#
+                     format(lb[ ,"studymo"], digits = 2),#
+                     format(ub[ ,"studymo"], digits = 2), sep =","),#
+                     format(est[ ,"vac"], digits = 2, nsmall = 1),#
+                     paste(#
+                      format(lb[ ,"vac"], digits = 2, nsmall = 1),#
+                      format(ub[ ,"vac"], digits = 2, nsmall = 1), sep =",")#
+                    )#
+  colnames(res_table) <- c("trend", "ci trend", "vac", "ci vac")#
+  floor(bwNeweyWest(lr))#
+  view(res_table)
+print(res_table) #
+  floor(bwNeweyWest(lr))
+res_table#
+  floor(bwNeweyWest(lr))
+#------------------------------------------------------------------------------##
+# Data Example: Analysis of the impact of pneumoccocal vaccine introduction on # #
+# the incidence of severe and very severe pneumonia in children 2-59 months in ##
+# Kilifi, Kenya. Analysis illustrates the use of differnt methods for adjusting##
+# autocorrelation (Prais-Winsten method, ARMA modelling and Newey-West method) #                                                               ##
+#------------------------------------------------------------------------------#  #
+#
+  library(tidyverse)#
+  library(lubridate)#
+  library(cowplot)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)#
+#
+# Data management  #
+  dat <-#
+    read_csv("data_pneumo_ex.csv") %>%#
+    mutate(rate_10000 = 10000 * rate) %>%#
+    mutate(log2rate = log(rate_10000, base = 2)) %>%#
+    mutate(day = 14) %>%#
+    mutate(month = match(month, month.abb)) %>%#
+    mutate(date = make_date(year, month, day)) %>%#
+    mutate(month = factor(month)) #
+    contrasts(dat$month) <- contr.sum(12)#
+# Fit models  #
+  lr <- lm(log2rate ~ vac + roll + studymo + month #
+           + strike1 + strike2, data = dat)#
+#
+  pw <- prais_winsten(log2rate ~ vac + roll + studymo + month #
+                      + strike1 + strike2, data = dat) #
+  aa <- auto.arima(dat$log2rate, #
+                   xreg = model.matrix.lm(lr)[,-1], #
+                   stepwise = T,#
+                   d = 0, #
+                   D = 0, #
+                   ic = 'aicc', #
+                   seasonal = F#
+                   )#
+# Table of trend and vaccine impact estimates#
+  par <- c("studymo", "vac")#
+  est <- rbind(coef(lr)[par], coef(pw)[par], coef(aa)[par], coef(lr)[par])#
+  se <- rbind(sqrt(diag(vcov(lr))[par]),#
+              sqrt(diag(vcovHC.prais(pw))[par]),#
+              sqrt(diag(vcov(aa))[par]),#
+              sqrt(diag(NeweyWest(lr, #
+                                  lag = NULL, prewhite = F, #
+                                  adjust = T)[par, par]))#
+              )#
+  lb <- 100 * (1 - 2^(est + 1.96 * se))#
+  ub <- 100 * (1 - 2^(est - 1.96 * se))#
+  est <- 100 * (1 - 2^est)#
+  res_table <- cbind(#
+                    format(est[ ,"studymo"], digits = 2),#
+                    paste(#
+                     format(lb[ ,"studymo"], digits = 2),#
+                     format(ub[ ,"studymo"], digits = 2), sep =","),#
+                     format(est[ ,"vac"], digits = 2, nsmall = 1),#
+                     paste(#
+                      format(lb[ ,"vac"], digits = 2, nsmall = 1),#
+                      format(ub[ ,"vac"], digits = 2, nsmall = 1), sep =",")#
+                    )#
+  colnames(res_table) <- c("trend", "ci trend", "vac", "ci vac")#
+  print(res_table)#
+  floor(bwNeweyWest(lr))#
+# Add predicted values from linear reg to dataset#
+  dat <-#
+  dat %>% #
+    mutate(pred_lr =   coef(lr)["(Intercept)"] #
+         + coef(lr)["studymo"] * studymo#
+         + coef(lr)["vac"] * vac#
+    ) #
+# Plot data and fitted model#
+  p1 <- ggplot(dat, aes(x = date)) +#
+    theme_bw() +#
+    geom_area(aes(y = log2rate),  fill = "gray", alpha = 0.75) +#
+    geom_line(aes(y = pred_lr), color = "black", size = 0.75,#
+              data = filter(dat, date < dmy("01-01-2011")) ) +#
+    geom_line(aes(y = pred_lr), color = "black", size = 0.75,#
+              data = filter(dat, date > dmy("01-04-2011"))) +#
+    geom_rect(aes(xmin = dmy("01-01-2011"), #
+                  xmax = dmy("31-03-2011"), #
+                  ymin = 0, ymax = 4.8), fill = "#CC99CC", alpha = 0.5) + #
+    geom_text(x = dmy("07-01-2011"), y = 5.0, label="roll-out") + #
+    scale_x_date(breaks = c(dmy("01-01-2002"), dmy("01-01-2006"), #
+                            dmy("01-01-2010"), dmy("01-01-2014"), #
+                            dmy("01-01-2018")), #
+                 date_minor_breaks = "1 year", date_labels = "%b %y") +#
+    ylab("rate per 10,000") +#
+    scale_y_continuous(breaks = 1:5, labels = c("2", "4", "8", "16", "32"))#
+#
+# Plot ACF and PACF#
+  ciline <- 1.96/sqrt(length(lr$residuals))#
+  acf_res <- acf(lr$residuals, plot = FALSE)#
+  pacf_res <- pacf(lr$residuals, plot = FALSE)#
+  acfdf <- with(acf_res, data.frame(lag, acf))#
+  pacfdf <- with(pacf_res, data.frame(lag, acf))#
+  p2 <- ggplot(data = acfdf) +#
+    theme_bw() +#
+    geom_segment(aes(x = lag, xend = lag, y = acf, yend = 0)) +#
+    geom_hline(yintercept = ciline, linetype = "dashed") +#
+    geom_hline(yintercept = -ciline, linetype = "dashed") +#
+    scale_y_continuous(breaks = seq(-0.2, 1, 0.2)) #
+  p3 <- ggplot(data = pacfdf) +#
+    theme_bw() +#
+    geom_segment(aes(x = lag, xend = lag, y = acf, yend = 0)) +#
+    geom_hline(yintercept = ciline, linetype = "dashed") +#
+    geom_hline(yintercept = -ciline, linetype = "dashed") +#
+    ylab("pacf") +#
+    scale_y_continuous(breaks = seq(-0.2, 1, 0.2))#
+#
+# Combine plots#
+  bottom_row <- plot_grid(p2, p3, labels = c('B', 'C'), label_size = 12)#
+  p <- plot_grid(p1, bottom_row, labels = c("A", ""), label_size = 12, ncol = 1)#
+  save_plot("fig_pneumo_ex.tiff", p)
+load("/Users/eidecbot/OneDrive - London School of Hygiene and Tropical Medicine/ITS_Autocorrelation/est.rda")
+ls()
+est
+#------------------------------------------------------------------------------##
+# Simualtion study comparing different methods (Prais-Wimnsten, Newey West,    ##
+# ARMA) for handling autocorrelation in interrupted time series.               ##
+# Code generates simulated datasets and produces estimates and standard errors ##
+# for subsequent analysis of performance                                       ##
+#------------------------------------------------------------------------------##
+#
+  library(MASS)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)#
+  library(sfsmisc)#
+  set.seed(1066)  #
+#
+# Function to generate data #
+# Input: vector of parameter values (ma1, ma2, ma3, n, b1, b2, b3, sd)#
+# Output: dataframe (y=ITS, x=intervention indicator, t=time)  #
+  genDat <- function(param) {#
+    ma <- param[1:3]#
+    n <- param[4]#
+    b <- param[5:7]#
+    sdv <- param[8]#
+    x <- c( rep( 0, n/2 ), rep( 1, n/2 ) ) #
+    t <- 1:n    #
+    mu <- b[1] + b[2] * x + b[3] * t #
+    e <- arima.sim(model = list(ma = ma), n = n, sd = sdv) #
+    y <- mu + e#
+    return(data.frame(y, x, t))#
+   }#
+# Function to suppress output (Hadley Wickham) #
+#
+  quiet <- function(x) { #
+    sink(tempfile()) #
+    on.exit(sink()) #
+    invisible(force(x)) #
+  }  #
+# Function to fit models #
+# Input: dataframe (y, x, t)#
+# Output: dataframe of parameter estimates and standard errors   #
+#
+  fitMods <- function(df) {#
+  # Linear regression#
+    lr <- lm(y ~ x + t, data = df) #
+    est_lr <- coef(lr)["x"] #
+    se_lr <- sqrt(vcov(lr)["x", "x"])#
+  # Prais Winsten #
+   	pw <- quiet(prais_winsten(y ~ x + t, data = df))#
+    est_pw <- coef(pw)["x"]#
+    se_pw <- sqrt(vcovHC.prais(pw)["x", "x"])#
+  # ARMA#
+   	aa <- auto.arima(df$y, #
+   	                 xreg = cbind(df$x, df$t), #
+   	                 stepwise = T,#
+   	                 d = 0, #
+   	                 D = 0, #
+   	                 ic = 'aicc', #
+   	                 seasonal = F)#
+   	converge_aa <- ifelse(sum(diag(vcov(aa)) <= 0) > 0, 0, 1)#
+   	est_aa <- ifelse(converge_aa == 1, #
+   	                 coef(aa)["xreg1"], #
+   	                 NaN#
+   	                 )#
+   	se_aa <- ifelse(converge_aa == 1, #
+   	                sqrt(vcov(aa)["xreg1","xreg1"]), #
+   	                NaN#
+   	                )  #
+  # Newey West#
+   	se_nw <- sqrt(NeweyWest(lr, #
+   	                        lag = NULL, #
+   	                        prewhite = F, #
+   	                        adjust = T)["x", "x"]#
+   	              )#
+  # MA1#
+   	ma1 <- arima(df$y, xreg = cbind(df$x, df$t), order = c(0, 0, 1))#
+   	est_ma1 <- coef(ma1)["cbind(df$x, df$t)1"]#
+   	se_ma1 <- sqrt(vcov(ma1)["cbind(df$x, df$t)1", "cbind(df$x, df$t)1"])#
+  # MA2#
+   	ma2 <- arima(df$y, xreg = cbind(df$x, df$t), order = c(0, 0, 2))#
+   	est_ma2 <- coef(ma2)["cbind(df$x, df$t)1"]#
+   	se_ma2 <- sqrt(vcov(ma2)["cbind(df$x, df$t)1", "cbind(df$x, df$t)1"]) 	 	#
+  # MA3#
+   	ma3 <- arima(df$y, xreg = cbind(df$x, df$t), order = c(0, 0, 3))#
+   	est_ma3 <- coef(ma3)["cbind(df$x, df$t)1"]#
+   	se_ma3 <- sqrt(vcov(ma3)["cbind(df$x, df$t)1", "cbind(df$x, df$t)1"])#
+  # Combine and output estimates and standard errors #
+    est <- c(est_lr, est_pw, est_aa, est_lr, est_ma1, est_ma2, est_ma3) 		#
+    se <- c(se_lr, se_pw, se_aa, se_nw, se_ma1, se_ma2, se_ma3) #
+    cbind(est, se)  	#
+  }#
+# Matrix of parameter values (ma1-ma3, n, b1-b3, sd)#
+# Each row represents a different scenario#
+  nma <- 20#
+  ma1values <- sort(runif(nma, min = 0, max = 1))#
+  ma2values <- runif(nma, min = 0, max = ma1values)#
+  ma3values <- runif(nma, min = 0, max = ma2values)#
+  nvalues  <- c(20, 50, 100, 300) #
+  nn <- length(nvalues)#
+  b1 <- 4 #
+  b2 <- -1#
+  b3 <- -1#
+  sdv <- 1#
+  param <- cbind(#
+    rep(ma1values, each = nn),#
+    rep(ma2values, each = nn),#
+    rep(ma3values, each = nn),#
+    rep(nvalues, nma),#
+    rep(b1, nma * nn),#
+    rep(b2, nma * nn),#
+    rep(b3, nma * nn),#
+    rep(sdv, nma * nn)#
+  )#
+  colnames(param) <- c("ma1", "ma2", "ma3","n", "b1", "b2", "b3", "sd")#
+  param[ , "b3"] <-  param[ , "b3"] / param[ , "n"]
+genDat <- function(param) {#
+    ma <- param[1:3]#
+    n <- param[4]#
+    b <- param[5:7]#
+    sdv <- param[8]#
+    x <- c( rep( 0, n/2 ), rep( 1, n/2 ) ) #
+    t <- 1:n    #
+    mu <- b[1] + b[2] * x + b[3] * t #
+    e <- arima.sim(model = list(ma = ma), n = n, sd = sdv) #
+    y <- mu + e#
+    return(data.frame(y, x, t))#
+   }
+param = c(0.4, 0.2, 0, 20, 4, -1 -1/20, 1)
+genDat(param=param)
+library(MASS)#
+  library(prais)#
+  library(sandwich)#
+  library(forecast)#
+  library(sfsmisc)#
+  set.seed(1066)  #
+#
+# Function to generate data #
+# Input: vector of parameter values (ma1, ma2, ma3, n, b1, b2, b3, sd)#
+# Output: dataframe (y=ITS, x=intervention indicator, t=time)  #
+  genDat <- function(param) {#
+    ma <- param[1:3]#
+    n <- param[4]#
+    b <- param[5:7]#
+    sdv <- param[8]#
+    x <- c( rep( 0, n/2 ), rep( 1, n/2 ) ) #
+    t <- 1:n    #
+    mu <- b[1] + b[2] * x + b[3] * t #
+    e <- arima.sim(model = list(ma = ma), n = n, sd = sdv) #
+    y <- mu + e#
+    return(data.frame(y, x, t))#
+   }
+genDat(param=param)
+load("/Users/eidecbot/OneDrive - London School of Hygiene and Tropical Medicine/ITS_Autocorrelation/est.rda")

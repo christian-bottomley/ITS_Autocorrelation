@@ -20,8 +20,8 @@
     mutate(log2rate = log(rate_10000, base = 2)) %>%
     mutate(day = 14) %>%
     mutate(month = match(month, month.abb)) %>%
-    mutate(date = make_date(year, month, day)) 
-    dat$month <- factor(dat$month) 
+    mutate(date = make_date(year, month, day)) %>%
+    mutate(month = factor(month)) 
     contrasts(dat$month) <- contr.sum(12)
     
 # Fit models  
@@ -69,10 +69,10 @@
                       format(lb[ ,"vac"], digits = 2, nsmall = 1),
                       format(ub[ ,"vac"], digits = 2, nsmall = 1), sep =",")
                     )
-  colnames(res_table) <- c("trend","ci trend", "vac", "ci vac")
+  colnames(res_table) <- c("trend", "ci trend", "vac", "ci vac")
+  print(res_table)
   floor(bwNeweyWest(lr))
-  view(res_table)              
-  
+            
 # Add predicted values from linear reg to dataset
   
   dat <-
@@ -88,11 +88,9 @@
     theme_bw() +
     geom_area(aes(y = log2rate),  fill = "gray", alpha = 0.75) +
     geom_line(aes(y = pred_lr), color = "black", size = 0.75,
-              data = filter(dat, date < dmy("01-01-2011")) 
-               ) +
+              data = filter(dat, date < dmy("01-01-2011")) ) +
     geom_line(aes(y = pred_lr), color = "black", size = 0.75,
-              data = filter(dat, date > dmy("01-04-2011")) 
-    ) +
+              data = filter(dat, date > dmy("01-04-2011"))) +
     geom_rect(aes(xmin = dmy("01-01-2011"), 
                   xmax = dmy("31-03-2011"), 
                   ymin = 0, ymax = 4.8), fill = "#CC99CC", alpha = 0.5) + 
@@ -101,26 +99,38 @@
                             dmy("01-01-2010"), dmy("01-01-2014"), 
                             dmy("01-01-2018")), 
                  date_minor_breaks = "1 year", date_labels = "%b %y") +
-    ylab("monthly rate per 10,000 (log scale)") +
+    ylab("rate per 10,000") +
     scale_y_continuous(breaks = 1:5, labels = c("2", "4", "8", "16", "32"))
 
-# Plot ACF
+# Plot ACF and PACF
   
   ciline <- 1.96/sqrt(length(lr$residuals))
   acf_res <- acf(lr$residuals, plot = FALSE)
-  acfdf <-  with(acf_res, data.frame(lag, acf)) 
- 
+  pacf_res <- pacf(lr$residuals, plot = FALSE)
+  acfdf <- with(acf_res, data.frame(lag, acf))
+  pacfdf <- with(pacf_res, data.frame(lag, acf))
+   
   p2 <- ggplot(data = acfdf) +
     theme_bw() +
     geom_segment(aes(x = lag, xend = lag, y = acf, yend = 0)) +
     geom_hline(yintercept = ciline, linetype = "dashed") +
     geom_hline(yintercept = -ciline, linetype = "dashed") +
     scale_y_continuous(breaks = seq(-0.2, 1, 0.2)) 
-    
+  
+  p3 <- ggplot(data = pacfdf) +
+    theme_bw() +
+    geom_segment(aes(x = lag, xend = lag, y = acf, yend = 0)) +
+    geom_hline(yintercept = ciline, linetype = "dashed") +
+    geom_hline(yintercept = -ciline, linetype = "dashed") +
+    ylab("pacf") +
+    scale_y_continuous(breaks = seq(-0.2, 1, 0.2))
+
 # Combine plots
   
-  p <- plot_grid(p1, p2, labels = "AUTO")
-  save_plot("pneumo_ex_fig.tiff", p)
+  bottom_row <- plot_grid(p2, p3, labels = c('B', 'C'), label_size = 12)
+  p <- plot_grid(p1, bottom_row, labels = c("A", ""), label_size = 12, ncol = 1)
+  
+  save_plot("fig_pneumo_ex.pdf", p)
     
   
   
